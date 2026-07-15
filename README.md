@@ -26,38 +26,6 @@ This application helps job seekers organize their job hunt. It features:
 
 ---
 
-## Installation
-
-### 1. Clone the repository and install dependencies
-Inside both the `frontend/` and `backend/` directories, run:
-```bash
-npm install
-```
-
-### 2. Set up the Database
-Make sure you have your environment variables set up in the `backend/.env` file. Then run migrations to build the tables in your database:
-```bash
-cd backend
-npx prisma migrate dev --name init
-```
-
-### 3. Run the Development Servers
-In separate terminal windows, start the backend and frontend dev servers.
-
-**For the Backend (Port 5000)**:
-```bash
-cd backend
-npm run dev
-```
-
-**For the Frontend (Port 3000)**:
-```bash
-cd frontend
-npm run dev
-```
-
----
-
 ## Environment Variables
 
 ### Backend (`backend/.env`)

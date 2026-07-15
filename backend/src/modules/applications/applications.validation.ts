@@ -1,0 +1,59 @@
+import { z } from 'zod';
+
+export const createApplicationSchema = z.object({
+  body: z.object({
+    companyId: z.string().uuid('Invalid company ID'),
+    position: z.string().min(1, 'Position is required'),
+    jobType: z.string().min(1, 'Job Type is required'),
+    status: z.enum([
+      'Wishlist',
+      'Applied',
+      'Online Assessment',
+      'HR Interview',
+      'Technical Interview',
+      'Final Interview',
+      'Offer',
+      'Accepted',
+      'Rejected',
+      'Withdrawn',
+    ]),
+    salaryMin: z.number().optional().nullable(),
+    salaryMax: z.number().optional().nullable(),
+    location: z.string().min(1, 'Location is required'),
+    source: z.string().optional().nullable(),
+    appliedDate: z.string().optional().nullable(),
+    deadline: z.string().optional().nullable(),
+    resumeId: z.string().uuid('Invalid resume ID').optional().nullable(),
+    coverLetter: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+  }),
+});
+
+export const updateApplicationSchema = z.object({
+  body: z.object({
+    companyId: z.string().uuid('Invalid company ID').optional(),
+    position: z.string().min(1, 'Position cannot be empty').optional(),
+    jobType: z.string().optional(),
+    status: z.enum([
+      'Wishlist',
+      'Applied',
+      'Online Assessment',
+      'HR Interview',
+      'Technical Interview',
+      'Final Interview',
+      'Offer',
+      'Accepted',
+      'Rejected',
+      'Withdrawn',
+    ]).optional(),
+    salaryMin: z.number().optional().nullable(),
+    salaryMax: z.number().optional().nullable(),
+    location: z.string().optional(),
+    source: z.string().optional().nullable(),
+    appliedDate: z.string().optional().nullable(),
+    deadline: z.string().optional().nullable(),
+    resumeId: z.string().uuid('Invalid resume ID').optional().nullable(),
+    coverLetter: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+  }),
+});

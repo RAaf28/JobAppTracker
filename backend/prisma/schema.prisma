@@ -1,0 +1,87 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  password     String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  companies    Company[]
+  resumes      Resume[]
+  applications Application[]
+}
+
+model Company {
+  id           String        @id @default(uuid())
+  name         String
+  industry     String?
+  website      String?
+  location     String?
+  size         String?
+  notes        String?
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Resume {
+  id           String        @id @default(uuid())
+  name         String
+  version      String
+  fileUrl      String?
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Application {
+  id           String      @id @default(uuid())
+  position     String
+  jobType      String      // Full-time, Part-time, Contract, Internship, Temporary
+  status       String      // Wishlist, Applied, Online Assessment, HR Interview, Technical Interview, Final Interview, Offer, Accepted, Rejected, Withdrawn
+  salaryMin    Float?
+  salaryMax    Float?
+  location     String      // Remote, Hybrid, On-site
+  source       String?     // LinkedIn, Indeed, Company website, Referral, etc.
+  appliedDate  DateTime    @default(now())
+  deadline     DateTime?
+  coverLetter  String?
+  notes        String?
+  companyId    String
+  company      Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  resumeId     String?
+  resume       Resume?     @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interviews   Interview[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Interview {
+  id            String      @id @default(uuid())
+  stage         String      // HR Interview, Technical Interview, etc.
+  date          DateTime
+  time          String?
+  interviewer   String?
+  meetingLink   String?
+  notes         String?
+  outcome       String?     // Passed, Failed, Pending
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}

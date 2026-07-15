@@ -16,7 +16,10 @@ const PORT = process.env.PORT || 5000;
 
 // Enable CORS
 app.use(cors({
-  origin: '*', // Allow all origins for dev
+  origin: (origin, callback) => {
+    // Dynamically reflect the request origin to allow credentials: true
+    callback(null, true);
+  },
   credentials: true,
 }));
 

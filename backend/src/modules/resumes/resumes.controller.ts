@@ -19,13 +19,23 @@ export const getResumes = async (req: AuthRequest, res: Response, next: NextFunc
 export const createResume = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
-    const { name, version, fileUrl } = req.body;
+    const { name, version, fileUrl, tags, isDefault } = req.body;
+
+    // If this resume is set as default, unset other defaults for this user
+    if (isDefault) {
+      await prisma.resume.updateMany({
+        where: { userId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
 
     const resume = await prisma.resume.create({
       data: {
         name,
         version,
         fileUrl,
+        tags: tags || [],
+        isDefault: !!isDefault,
         userId,
       },
     });
@@ -40,7 +50,7 @@ export const updateResume = async (req: AuthRequest, res: Response, next: NextFu
   try {
     const userId = req.user!.id;
     const { id } = req.params;
-    const { name, version, fileUrl } = req.body;
+    const { name, version, fileUrl, tags, isDefault } = req.body;
 
     const existingResume = await prisma.resume.findFirst({
       where: { id, userId },
@@ -50,12 +60,22 @@ export const updateResume = async (req: AuthRequest, res: Response, next: NextFu
       return next(new AppError('Resume not found or unauthorized', 404));
     }
 
+    // If updating this resume to be default, unset other defaults
+    if (isDefault) {
+      await prisma.resume.updateMany({
+        where: { userId, isDefault: true, NOT: { id } },
+        data: { isDefault: false },
+      });
+    }
+
     const resume = await prisma.resume.update({
       where: { id },
       data: {
         name,
         version,
         fileUrl,
+        tags: tags !== undefined ? tags : undefined,
+        isDefault: isDefault !== undefined ? !!isDefault : undefined,
       },
     });
 

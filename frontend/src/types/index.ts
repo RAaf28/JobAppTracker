@@ -20,6 +20,8 @@ export interface Resume {
   name: string;
   version: string;
   fileUrl?: string | null;
+  tags?: string[];
+  isDefault?: boolean;
   createdAt: string;
 }
 

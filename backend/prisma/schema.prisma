@@ -40,6 +40,8 @@ model Resume {
   name         String
   version      String
   fileUrl      String?
+  tags         String[]      @default([])
+  isDefault    Boolean       @default(false)
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications Application[]

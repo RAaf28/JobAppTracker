@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../../components/Layout';
 import { api } from '../../services/api';
 import { Resume } from '../../types';
-import { Plus, Search, FileText, Pencil, Trash2, X, AlertCircle, Calendar, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Plus, Search, FileText, Pencil, Trash2, X, AlertCircle, Calendar, ExternalLink, Star, Tag } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 export default function ResumesPage() {
@@ -30,6 +30,8 @@ export default function ResumesPage() {
       name: '',
       version: '',
       fileUrl: '',
+      tags: '',
+      isDefault: false,
     },
   });
 
@@ -38,6 +40,8 @@ export default function ResumesPage() {
       name: '',
       version: 'v1.0',
       fileUrl: '',
+      tags: '',
+      isDefault: resumes.length === 0, // first resume auto-defaults
     });
     setEditingResume(null);
     setFormError(null);
@@ -49,6 +53,8 @@ export default function ResumesPage() {
       name: resume.name,
       version: resume.version,
       fileUrl: resume.fileUrl || '',
+      tags: (resume.tags || []).join(', '),
+      isDefault: resume.isDefault || false,
     });
     setEditingResume(resume);
     setFormError(null);
@@ -57,10 +63,17 @@ export default function ResumesPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      const payload = {
+        ...data,
+        tags: data.tags
+          .split(',')
+          .map((t: string) => t.trim().toLowerCase())
+          .filter(Boolean),
+      };
       if (editingResume) {
-        return api.patch(`/resumes/${editingResume.id}`, data);
+        return api.patch(`/resumes/${editingResume.id}`, payload);
       } else {
-        return api.post('/resumes', data);
+        return api.post('/resumes', payload);
       }
     },
     onSuccess: () => {
@@ -90,7 +103,8 @@ export default function ResumesPage() {
 
   const filteredResumes = resumes.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
-    r.version.toLowerCase().includes(search.toLowerCase())
+    r.version.toLowerCase().includes(search.toLowerCase()) ||
+    (r.tags || []).some((t) => t.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -117,7 +131,7 @@ export default function ResumesPage() {
           <input
             type="text"
             className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
-            placeholder="Search by resume name or version..."
+            placeholder="Search by name, version, or tag..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -139,7 +153,10 @@ export default function ResumesPage() {
             {filteredResumes.map((resume) => (
               <div
                 key={resume.id}
-                className="rounded-xl border border-[#24262f] bg-[#16181d] p-6 flex flex-col justify-between hover:border-slate-700 transition-colors"
+                className={`rounded-xl border p-6 flex flex-col justify-between transition-colors ${resume.isDefault
+                    ? 'border-blue-600/50 bg-[#16181d]'
+                    : 'border-[#24262f] bg-[#16181d] hover:border-slate-700'
+                  }`}
               >
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start justify-between">
@@ -148,7 +165,12 @@ export default function ResumesPage() {
                         <FileText className="h-6 w-6" />
                       </div>
                       <div>
-                        <h2 className="text-md font-bold text-white leading-tight">{resume.name}</h2>
+                        <div className="flex items-center gap-1.5">
+                          <h2 className="text-md font-bold text-white leading-tight">{resume.name}</h2>
+                          {resume.isDefault && (
+                            <Star className="h-3.5 w-3.5 fill-blue-400 text-blue-400" />
+                          )}
+                        </div>
                         <span className="inline-block mt-1 text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 bg-blue-600/10 text-blue-400 rounded">
                           {resume.version}
                         </span>
@@ -172,6 +194,20 @@ export default function ResumesPage() {
                       </button>
                     </div>
                   </div>
+
+                  {resume.tags && resume.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {resume.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded bg-[#24262f] text-slate-300"
+                        >
+                          <Tag className="h-2.5 w-2.5" />
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-[#24262f] mt-2">
                     <div className="flex items-center gap-1">
@@ -246,6 +282,21 @@ export default function ResumesPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                    Tags (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                    placeholder="e.g. frontend, startup, remote"
+                    {...register('tags')}
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Used to auto-suggest this resume when the job title matches a tag.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
                     File URL (Google Drive, Dropbox, Notion, etc.)
                   </label>
                   <input
@@ -254,6 +305,18 @@ export default function ResumesPage() {
                     placeholder="e.g. https://drive.google.com/..."
                     {...register('fileUrl')}
                   />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isDefault"
+                    className="h-4 w-4 rounded border-[#24262f] bg-[#0d0e12] accent-blue-600"
+                    {...register('isDefault')}
+                  />
+                  <label htmlFor="isDefault" className="text-sm text-slate-300">
+                    Use as default resume when no tags match
+                  </label>
                 </div>
 
                 <div className="flex justify-end gap-3 border-t border-[#24262f] pt-4">

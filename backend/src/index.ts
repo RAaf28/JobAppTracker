@@ -23,6 +23,11 @@ app.use(cors({
 // Body parser
 app.use(express.json());
 
+// Root health check route
+app.get('/', (req, res) => {
+  res.json({ success: true, message: "Job Application Tracker API is running successfully!" });
+});
+
 // Routes
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/applications', applicationsRouter);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../../components/Layout';
 import { api } from '../../services/api';
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { formatDate, formatCurrency } from '../../lib/utils';
+import { suggestResume } from '../../lib/useSuggestedResume';
 
 export default function ApplicationsPage() {
   const queryClient = useQueryClient();
@@ -34,6 +35,7 @@ export default function ApplicationsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [suggestedResumeId, setSuggestedResumeId] = useState<string | null>(null);
 
   // Fetch applications with parameters
   const { data, isLoading } = useQuery<{ success: boolean; applications: Application[] }>({
@@ -75,7 +77,7 @@ export default function ApplicationsPage() {
   const companies = companiesData?.companies || [];
   const resumes = resumesData?.resumes || [];
 
-  const { register, handleSubmit, reset } = useForm({
+  const { register, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
       companyId: '',
       position: '',
@@ -85,12 +87,47 @@ export default function ApplicationsPage() {
       salaryMax: '',
       location: 'Remote',
       source: '',
-      appliedDate: '',
+      appliedDate: new Date().toISOString().split('T')[0],
       deadline: '',
       resumeId: '',
       coverLetter: '',
       notes: '',
     },
+  });
+
+  // Watch form values for auto-suggestion
+  const watchedPosition = watch('position');
+  const watchedCompanyId = watch('companyId');
+  const watchedResumeId = watch('resumeId');
+
+  useEffect(() => {
+    if (editingApplication || !modalOpen) return;
+
+    const delayDebounce = setTimeout(() => {
+      const companyName = companies.find((c) => c.id === watchedCompanyId)?.name || '';
+      const suggested = suggestResume(resumes, watchedPosition || '', companyName);
+
+      if (suggested) {
+        setValue('resumeId', suggested.id);
+        setSuggestedResumeId(suggested.id);
+      } else {
+        if (watchedResumeId === suggestedResumeId) {
+          setValue('resumeId', '');
+          setSuggestedResumeId(null);
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [watchedPosition, watchedCompanyId, resumes, companies, editingApplication, modalOpen, setValue, suggestedResumeId, watchedResumeId]);
+
+  // Check if current selection is the auto-suggested one, and how it matched
+  const showSuggestedIndicator = watchedResumeId === suggestedResumeId && !!suggestedResumeId;
+  const selectedResume = resumes.find((r) => r.id === watchedResumeId);
+  const isMatchByTags = selectedResume && (selectedResume.tags || []).some((tag) => {
+    const companyName = companies.find((c) => c.id === watchedCompanyId)?.name || '';
+    const haystack = `${watchedPosition || ''} ${companyName}`.toLowerCase();
+    return tag && haystack.includes(tag.toLowerCase());
   });
 
   const openAddModal = () => {
@@ -109,6 +146,7 @@ export default function ApplicationsPage() {
       coverLetter: '',
       notes: '',
     });
+    setSuggestedResumeId(null);
     setEditingApplication(null);
     setFormError(null);
     setModalOpen(true);
@@ -133,6 +171,7 @@ export default function ApplicationsPage() {
       coverLetter: app.coverLetter || '',
       notes: app.notes || '',
     });
+    setSuggestedResumeId(null);
     setEditingApplication(app);
     setFormError(null);
     setModalOpen(true);
@@ -594,6 +633,11 @@ export default function ApplicationsPage() {
                             </option>
                           ))}
                         </select>
+                        {showSuggestedIndicator && (
+                          <span className="text-[11px] text-blue-400 mt-1 block">
+                            {isMatchByTags ? 'Suggested based on tags' : 'Suggested (Default)'}
+                          </span>
+                        )}
                       </div>
                     </div>
 

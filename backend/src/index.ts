@@ -43,7 +43,7 @@ app.use('/api/v1/dashboard', dashboardRouter);
 app.use(errorHandler);
 
 // Start server
-if (env.NODE_ENV !== 'production') {
+if (env.NODE_ENV !== 'production' && env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });

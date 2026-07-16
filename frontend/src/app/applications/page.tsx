@@ -20,6 +20,8 @@ import {
   ArrowUpDown,
   FileText,
   MessageSquare,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { formatDate, formatCurrency } from '../../lib/utils';
@@ -36,6 +38,23 @@ export default function ApplicationsPage() {
   const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [suggestedResumeId, setSuggestedResumeId] = useState<string | null>(null);
+
+  // S3 AI Tailoring states
+  const [acceptedIndices, setAcceptedIndices] = useState<number[]>([]);
+  const [tailoringError, setTailoringError] = useState<string | null>(null);
+
+  const tailorMutation = useMutation({
+    mutationFn: async ({ resumeId, jobDescription }: { resumeId: string; jobDescription: string }) => {
+      setTailoringError(null);
+      setAcceptedIndices([]);
+      const response = await api.post(`/resumes/${resumeId}/tailor`, { jobDescription });
+      return response.data.data; // { summary, suggestions: [{ original, suggested, reason }] }
+    },
+    onError: (err: any) => {
+      console.error(err);
+      setTailoringError("Couldn't generate suggestions, try again");
+    }
+  });
 
   // Fetch applications with parameters
   const { data, isLoading } = useQuery<{ success: boolean; applications: Application[] }>({
@@ -92,6 +111,8 @@ export default function ApplicationsPage() {
       resumeId: '',
       coverLetter: '',
       notes: '',
+      jobDescription: '',
+      tailoringNotes: '',
     },
   });
 
@@ -99,6 +120,7 @@ export default function ApplicationsPage() {
   const watchedPosition = watch('position');
   const watchedCompanyId = watch('companyId');
   const watchedResumeId = watch('resumeId');
+  const watchedJobDescription = watch('jobDescription');
 
   useEffect(() => {
     if (editingApplication || !modalOpen) return;
@@ -131,6 +153,9 @@ export default function ApplicationsPage() {
   });
 
   const openAddModal = () => {
+    tailorMutation.reset();
+    setAcceptedIndices([]);
+    setTailoringError(null);
     reset({
       companyId: companies[0]?.id || '',
       position: '',
@@ -145,6 +170,8 @@ export default function ApplicationsPage() {
       resumeId: '',
       coverLetter: '',
       notes: '',
+      jobDescription: '',
+      tailoringNotes: '',
     });
     setSuggestedResumeId(null);
     setEditingApplication(null);
@@ -153,6 +180,9 @@ export default function ApplicationsPage() {
   };
 
   const openEditModal = (app: Application) => {
+    tailorMutation.reset();
+    setAcceptedIndices([]);
+    setTailoringError(null);
     const appDate = app.appliedDate ? new Date(app.appliedDate).toISOString().split('T')[0] : '';
     const deadlineDate = app.deadline ? new Date(app.deadline).toISOString().split('T')[0] : '';
 
@@ -170,6 +200,8 @@ export default function ApplicationsPage() {
       resumeId: app.resumeId || '',
       coverLetter: app.coverLetter || '',
       notes: app.notes || '',
+      jobDescription: app.jobDescription || '',
+      tailoringNotes: app.tailoringNotes || '',
     });
     setSuggestedResumeId(null);
     setEditingApplication(app);
@@ -215,6 +247,41 @@ export default function ApplicationsPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
     },
   });
+
+  const handleTailorResume = () => {
+    if (watchedResumeId && watchedJobDescription) {
+      tailorMutation.mutate({ resumeId: watchedResumeId, jobDescription: watchedJobDescription });
+    }
+  };
+
+  const handleAcceptSuggestion = (idx: number, suggestions: any[]) => {
+    let nextIndices = [...acceptedIndices];
+    if (nextIndices.includes(idx)) {
+      nextIndices = nextIndices.filter(item => item !== idx);
+    } else {
+      nextIndices.push(idx);
+    }
+    setAcceptedIndices(nextIndices);
+    updateTailoringNotesField(nextIndices, suggestions);
+  };
+
+  const handleAcceptAllSuggestions = (suggestions: any[]) => {
+    const nextIndices = suggestions.map((_, idx) => idx);
+    setAcceptedIndices(nextIndices);
+    updateTailoringNotesField(nextIndices, suggestions);
+  };
+
+  const updateTailoringNotesField = (indices: number[], suggestions: any[]) => {
+    if (indices.length === 0) {
+      setValue('tailoringNotes', '');
+      return;
+    }
+    const formatted = suggestions
+      .filter((_, idx) => indices.includes(idx))
+      .map(s => `Original: "${s.original}"\nSuggested: "${s.suggested}"\nReason: ${s.reason}`)
+      .join('\n\n---\n\n');
+    setValue('tailoringNotes', formatted);
+  };
 
   const onSubmit = (formData: any) => {
     saveMutation.mutate(formData);
@@ -425,6 +492,17 @@ export default function ApplicationsPage() {
                     </p>
                     <p className="text-sm text-slate-300 mt-1 line-clamp-2 leading-relaxed whitespace-pre-line">
                       {app.notes}
+                    </p>
+                  </div>
+                )}
+
+                {app.tailoringNotes && (
+                  <div className="mt-3 border-t border-[#24262f] pt-3">
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-blue-400" /> Tailoring Notes
+                    </p>
+                    <p className="text-sm text-slate-300 mt-1 line-clamp-3 leading-relaxed whitespace-pre-line">
+                      {app.tailoringNotes}
                     </p>
                   </div>
                 )}

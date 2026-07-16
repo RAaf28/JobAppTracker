@@ -23,4 +23,10 @@ export const env = {
   
   AUTH_RATE_LIMIT_WINDOW_MS: parseInt(getEnvVar('AUTH_RATE_LIMIT_WINDOW_MS', '900000'), 10), // 15 minutes
   AUTH_RATE_LIMIT_MAX: parseInt(getEnvVar('AUTH_RATE_LIMIT_MAX', '15'), 10),
+
+  // AWS S3 Configuration (with development fallbacks to prevent startup crashes)
+  AWS_REGION: getEnvVar('AWS_REGION', 'us-east-1'),
+  AWS_ACCESS_KEY_ID: getEnvVar('AWS_ACCESS_KEY_ID', 'dev_access_key'),
+  AWS_SECRET_ACCESS_KEY: getEnvVar('AWS_SECRET_ACCESS_KEY', 'dev_secret_key'),
+  AWS_S3_BUCKET: getEnvVar('AWS_S3_BUCKET', 'dev-resume-bucket'),
 };

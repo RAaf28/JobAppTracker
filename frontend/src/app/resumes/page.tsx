@@ -107,6 +107,31 @@ export default function ResumesPage() {
     (r.tags || []).some((t) => t.toLowerCase().includes(search.toLowerCase()))
   );
 
+  // Helper to request presigned URL and upload file directly to S3
+  const handleFileUpload = async (resumeId: string, file: File) => {
+    try {
+      // 1. Ask backend for a presigned URL
+      const response = await api.post(`/resumes/${resumeId}/upload`, {
+        fileType: file.type,
+      });
+      const { uploadUrl, key } = response.data;
+
+      // 2. Upload the actual file directly to S3 using that URL
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+
+      // 3. Save the returned `key` on the resume record (fileUrl field, or a new s3Key field)
+      // e.g., await api.patch(`/resumes/${resumeId}`, { fileUrl: key });
+      return key;
+    } catch (err) {
+      console.error('File upload failed:', err);
+      throw err;
+    }
+  };
+
   return (
     <Layout>
       <div className="flex flex-col gap-8">
@@ -154,8 +179,8 @@ export default function ResumesPage() {
               <div
                 key={resume.id}
                 className={`rounded-xl border p-6 flex flex-col justify-between transition-colors ${resume.isDefault
-                    ? 'border-blue-600/50 bg-[#16181d]'
-                    : 'border-[#24262f] bg-[#16181d] hover:border-slate-700'
+                  ? 'border-blue-600/50 bg-[#16181d]'
+                  : 'border-[#24262f] bg-[#16181d] hover:border-slate-700'
                   }`}
               >
                 <div className="flex flex-col gap-4">

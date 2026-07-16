@@ -106,6 +106,7 @@ describe('POST /api/v1/resumes/:id/upload', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.uploadUrl).toBe('https://mock-s3-presigned-url.com/resumes/123/abc.pdf');
     expect(res.body.key).toContain(`resumes/${mockResumeId}/`);
+    expect(res.body.fileUrl).toContain(`https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/resumes/${mockResumeId}/`);
     expect(prisma.resume.findFirst).toHaveBeenCalledWith({
       where: { id: mockResumeId, userId: mockUserId },
     });

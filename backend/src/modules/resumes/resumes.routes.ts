@@ -11,6 +11,7 @@ import { createResumeSchema, updateResumeSchema } from './resumes.validation';
 import { generateUploadUrl } from './service';
 import { prisma } from '../../config/db';
 import { AuthRequest } from '../../types';
+import { env } from '../../config/env';
 
 const router = Router();
 
@@ -48,11 +49,13 @@ router.post('/:id/upload', async (req: AuthRequest, res, next) => {
     }
 
     const { uploadUrl, key } = await generateUploadUrl(id, fileType);
+    const fileUrl = `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
     
     return res.status(200).json({
       success: true,
       uploadUrl,
       key,
+      fileUrl,
     });
   } catch (error) {
     return next(error);

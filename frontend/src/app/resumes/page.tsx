@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../../components/Layout';
 import { api } from '../../services/api';
 import { Resume } from '../../types';
-import { Plus, Search, FileText, Pencil, Trash2, X, AlertCircle, Calendar, ExternalLink, Star, Tag } from 'lucide-react';
+import { Plus, Search, FileText, Pencil, Trash2, X, AlertCircle, Calendar, ExternalLink, Star, Tag, Upload } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 export default function ResumesPage() {
@@ -14,6 +14,7 @@ export default function ResumesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingResume, setEditingResume] = useState<Resume | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data, isLoading, error } = useQuery<{ success: boolean; resumes: Resume[] }>({
     queryKey: ['resumes'],
@@ -45,6 +46,7 @@ export default function ResumesPage() {
     });
     setEditingResume(null);
     setFormError(null);
+    setSelectedFile(null);
     setModalOpen(true);
   };
 
@@ -58,6 +60,7 @@ export default function ResumesPage() {
     });
     setEditingResume(resume);
     setFormError(null);
+    setSelectedFile(null);
     setModalOpen(true);
   };
 
@@ -70,19 +73,49 @@ export default function ResumesPage() {
           .map((t: string) => t.trim().toLowerCase())
           .filter(Boolean),
       };
+
+      let response;
       if (editingResume) {
-        return api.patch(`/resumes/${editingResume.id}`, payload);
+        response = await api.patch(`/resumes/${editingResume.id}`, payload);
       } else {
-        return api.post('/resumes', payload);
+        response = await api.post('/resumes', payload);
       }
+
+      const resume = response.data.resume;
+
+      if (selectedFile && resume) {
+        try {
+          // 1. Ask backend for a presigned URL
+          const uploadResponse = await api.post(`/resumes/${resume.id}/upload`, {
+            fileType: selectedFile.type,
+          });
+          const { uploadUrl, fileUrl } = uploadResponse.data;
+
+          // 2. Upload the actual file directly to S3 using that URL
+          await fetch(uploadUrl, {
+            method: 'PUT',
+            body: selectedFile,
+            headers: { 'Content-Type': selectedFile.type },
+          });
+
+          // 3. Update the resume database record with the new S3 fileUrl
+          await api.patch(`/resumes/${resume.id}`, { fileUrl });
+        } catch (uploadErr) {
+          console.error('S3 Upload failed:', uploadErr);
+          throw new Error('Resume metadata saved, but S3 file upload failed.');
+        }
+      }
+
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resumes'] });
       setModalOpen(false);
+      setSelectedFile(null);
       reset();
     },
     onError: (err: any) => {
-      setFormError(err.response?.data?.message || 'Something went wrong.');
+      setFormError(err.message || err.response?.data?.message || 'Something went wrong.');
     },
   });
 
@@ -318,6 +351,32 @@ export default function ResumesPage() {
                   <p className="text-[11px] text-slate-500 mt-1">
                     Used to auto-suggest this resume when the job title matches a tag.
                   </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Upload PDF Resume
+                  </label>
+                  <div className="border border-dashed border-[#24262f] rounded-lg p-4 bg-[#0d0e12] flex flex-col items-center justify-center cursor-pointer hover:border-slate-500 transition-colors relative">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setSelectedFile(file);
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <Upload className="h-5 w-5 text-slate-400 mb-1.5" />
+                    <span className="text-xs text-slate-300 font-medium text-center truncate w-full px-2">
+                      {selectedFile ? selectedFile.name : 'Select PDF Resume'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 mt-1">Max 5MB (PDF only)</span>
+                  </div>
+                </div>
+
+                <div className="text-center text-[10px] font-semibold text-slate-500 py-1">
+                  — OR —
                 </div>
 
                 <div>

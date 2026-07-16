@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import { env } from './config/env';
+import { apiLimiter } from './middleware/rate-limiter';
 import authRouter from './modules/auth/auth.routes';
 import applicationsRouter from './modules/applications/applications.routes';
 import companiesRouter from './modules/companies/companies.routes';
@@ -9,10 +10,8 @@ import interviewsRouter from './modules/interviews/interviews.routes';
 import dashboardRouter from './modules/dashboard/dashboard.routes';
 import { errorHandler } from './middleware/error';
 
-dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 
 // Enable CORS
 app.use(cors({
@@ -32,6 +31,7 @@ app.get('/', (req, res) => {
 });
 
 // Routes
+app.use('/api/v1', apiLimiter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/applications', applicationsRouter);
 app.use('/api/v1/companies', companiesRouter);
@@ -43,7 +43,7 @@ app.use('/api/v1/dashboard', dashboardRouter);
 app.use(errorHandler);
 
 // Start server
-if (process.env.NODE_ENV !== 'production') {
+if (env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });

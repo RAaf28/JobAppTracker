@@ -2,8 +2,9 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../types';
 import { AppError } from '../utils/custom-error';
+import { env } from '../config/env';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
+const JWT_SECRET = env.JWT_SECRET;
 
 export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;

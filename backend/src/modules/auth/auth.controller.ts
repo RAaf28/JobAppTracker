@@ -4,8 +4,9 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../../config/db';
 import { AppError } from '../../utils/custom-error';
 import { AuthRequest } from '../../types';
+import { env } from '../../config/env';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_me_in_prod';
+const JWT_SECRET = env.JWT_SECRET;
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body;

@@ -30,6 +30,6 @@ export const env = {
   AWS_SECRET_ACCESS_KEY: getEnvVar('AWS_SECRET_ACCESS_KEY', 'dev_secret_key'),
   AWS_S3_BUCKET: getEnvVar('AWS_S3_BUCKET', 'dev-resume-bucket'),
   
-  // Gemini Configuration (with development fallback to prevent startup crashes)
-  GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY', 'mock_gemini_key'),
+  // Groq Configuration (with development fallback to prevent startup crashes)
+  GROQ_API_KEY: getEnvVar('GROQ_API_KEY', 'mock_groq_key'),
 };

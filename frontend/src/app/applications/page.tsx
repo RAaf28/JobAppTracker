@@ -67,6 +67,7 @@ export default function ApplicationsPage() {
   const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [suggestedResumeId, setSuggestedResumeId] = useState<string | null>(null);
+  const [resumeManuallySelected, setResumeManuallySelected] = useState(false);
 
   const [acceptedIndices, setAcceptedIndices] = useState<number[]>([]);
   const [tailoringError, setTailoringError] = useState<string | null>(null);
@@ -171,7 +172,7 @@ export default function ApplicationsPage() {
   const canTailorResume = Boolean(watchedResumeId && watchedJobDescription.trim());
 
   useEffect(() => {
-    if (editingApplication || !modalOpen) return;
+    if (editingApplication || !modalOpen || resumeManuallySelected) return;
 
     const delayDebounce = setTimeout(() => {
       const companyName = companies.find((c) => c.id === watchedCompanyId)?.name || '';
@@ -189,7 +190,7 @@ export default function ApplicationsPage() {
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [watchedPosition, watchedCompanyId, resumes, companies, editingApplication, modalOpen, setValue, suggestedResumeId, watchedResumeId]);
+  }, [watchedPosition, watchedCompanyId, resumes, companies, editingApplication, modalOpen, resumeManuallySelected, setValue, suggestedResumeId, watchedResumeId]);
 
   // Check if current selection is the auto-suggested one, and how it matched
   const showSuggestedIndicator = watchedResumeId === suggestedResumeId && !!suggestedResumeId;
@@ -204,6 +205,7 @@ export default function ApplicationsPage() {
     tailorMutation.reset();
     setAcceptedIndices([]);
     setTailoringError(null);
+    setResumeManuallySelected(false);
     reset({
       companyId: companies[0]?.id || '',
       position: '',
@@ -231,6 +233,7 @@ export default function ApplicationsPage() {
     tailorMutation.reset();
     setAcceptedIndices([]);
     setTailoringError(null);
+    setResumeManuallySelected(false);
     const appDate = app.appliedDate ? new Date(app.appliedDate).toISOString().split('T')[0] : '';
     const deadlineDate = app.deadline ? new Date(app.deadline).toISOString().split('T')[0] : '';
 
@@ -755,7 +758,9 @@ export default function ApplicationsPage() {
                         </label>
                         <select
                           className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                          {...register('resumeId')}
+                          {...register('resumeId', {
+                            onChange: () => setResumeManuallySelected(true),
+                          })}
                         >
                           <option value="">No linked resume...</option>
                           {resumes.map((r) => (

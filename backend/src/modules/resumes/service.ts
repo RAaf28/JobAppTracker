@@ -2,7 +2,7 @@ import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3, BUCKET_NAME } from '../../config/s3';
 import { randomUUID } from 'crypto';
-import { geminiModel } from '../../config/gemini';
+import { groq } from '../../config/groq';
 
 const pdfParse = require('pdf-parse');
 
@@ -64,11 +64,12 @@ Return the response as JSON with this exact shape:
 }
 `;
 
-  const result = await geminiModel.generateContent(prompt);
-  const text = result.response.text();
+  const completion = await groq.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
+    model: 'llama-3.3-70b-versatile',
+    response_format: { type: 'json_object' },
+  });
 
-  // Gemini sometimes wraps JSON in markdown fences — strip if present
-  const cleaned = text.replace(/```json|```/g, '').trim();
-
-  return JSON.parse(cleaned);
+  const text = completion.choices[0]?.message?.content ?? '{}';
+  return JSON.parse(text);
 }

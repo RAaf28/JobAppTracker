@@ -8,7 +8,7 @@ import {
 import { auth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { createResumeSchema, updateResumeSchema } from './resumes.validation';
-import { generateUploadUrl } from './service';
+import { generateUploadUrl, extractResumeText } from './service';
 import { prisma } from '../../config/db';
 import { AuthRequest } from '../../types';
 import { env } from '../../config/env';
@@ -56,6 +56,55 @@ router.post('/:id/upload', async (req: AuthRequest, res, next) => {
       uploadUrl,
       key,
       fileUrl,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/:id/extract-text', async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // Verify resume exists and belongs to the authenticated user (prevents IDOR)
+    const resume = await prisma.resume.findFirst({
+      where: { id, userId },
+    });
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume not found or unauthorized',
+      });
+    }
+
+    if (!resume.fileUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Resume does not have an uploaded file.',
+      });
+    }
+
+    let s3Key: string;
+    try {
+      const urlObj = new URL(resume.fileUrl);
+      s3Key = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+      if (!urlObj.hostname.includes('.amazonaws.com')) {
+        throw new Error('Not an S3 URL');
+      }
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        message: 'Resume file is not stored in S3 (unsupported format or link).',
+      });
+    }
+
+    const text = await extractResumeText(s3Key);
+
+    return res.status(200).json({
+      success: true,
+      text,
     });
   } catch (error) {
     return next(error);

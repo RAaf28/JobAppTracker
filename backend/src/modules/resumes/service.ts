@@ -2,6 +2,7 @@ import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3, BUCKET_NAME } from '../../config/s3';
 import { randomUUID } from 'crypto';
+import { geminiModel } from '../../config/gemini';
 
 const pdfParse = require('pdf-parse');
 
@@ -39,4 +40,35 @@ async function streamToBuffer(stream: any): Promise<Buffer> {
     chunks.push(Buffer.from(chunk));
   }
   return Buffer.concat(chunks);
+}
+
+export async function tailorResume(resumeText: string, jobDescription: string) {
+  const prompt = `
+You are a resume assistant. Given the resume text and job description below,
+suggest specific, concrete edits to better align the resume with the job —
+focus on rewording bullet points to match relevant keywords and responsibilities.
+Do not fabricate experience that isn't in the original resume.
+
+Resume:
+${resumeText}
+
+Job Description:
+${jobDescription}
+
+Return the response as JSON with this exact shape:
+{
+  "summary": "1-2 sentence overview of key alignment gaps",
+  "suggestions": [
+    { "original": "...", "suggested": "...", "reason": "..." }
+  ]
+}
+`;
+
+  const result = await geminiModel.generateContent(prompt);
+  const text = result.response.text();
+
+  // Gemini sometimes wraps JSON in markdown fences — strip if present
+  const cleaned = text.replace(/```json|```/g, '').trim();
+
+  return JSON.parse(cleaned);
 }

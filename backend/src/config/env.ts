@@ -29,4 +29,7 @@ export const env = {
   AWS_ACCESS_KEY_ID: getEnvVar('AWS_ACCESS_KEY_ID', 'dev_access_key'),
   AWS_SECRET_ACCESS_KEY: getEnvVar('AWS_SECRET_ACCESS_KEY', 'dev_secret_key'),
   AWS_S3_BUCKET: getEnvVar('AWS_S3_BUCKET', 'dev-resume-bucket'),
+  
+  // Gemini Configuration (with development fallback to prevent startup crashes)
+  GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY', 'mock_gemini_key'),
 };

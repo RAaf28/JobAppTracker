@@ -19,3 +19,12 @@ export const updateResumeSchema = z.object({
     isDefault: z.boolean().optional(),
   }),
 });
+
+export const tailorResumeSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid resume ID format'),
+  }),
+  body: z.object({
+    jobDescription: z.string().min(1, 'Job description cannot be empty.'),
+  }),
+});

@@ -27,6 +27,35 @@ import { useForm } from 'react-hook-form';
 import { formatDate, formatCurrency } from '../../lib/utils';
 import { suggestResume } from '../../lib/useSuggestedResume';
 
+type TailorSuggestion = {
+  original: string;
+  suggested: string;
+  reason: string;
+};
+
+type TailorResponse = {
+  summary: string;
+  suggestions: TailorSuggestion[];
+};
+
+type ApplicationFormValues = {
+  companyId: string;
+  position: string;
+  jobType: string;
+  status: string;
+  salaryMin: string;
+  salaryMax: string;
+  location: string;
+  source: string;
+  appliedDate: string;
+  deadline: string;
+  resumeId: string;
+  coverLetter: string;
+  notes: string;
+  jobDescription: string;
+  tailoringNotes: string;
+};
+
 export default function ApplicationsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -39,20 +68,37 @@ export default function ApplicationsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [suggestedResumeId, setSuggestedResumeId] = useState<string | null>(null);
 
-  // S3 AI Tailoring states
   const [acceptedIndices, setAcceptedIndices] = useState<number[]>([]);
   const [tailoringError, setTailoringError] = useState<string | null>(null);
 
-  const tailorMutation = useMutation({
-    mutationFn: async ({ resumeId, jobDescription }: { resumeId: string; jobDescription: string }) => {
+  const tailorMutation = useMutation<TailorResponse, Error, { resumeId: string; jobDescription: string }>({
+    mutationFn: async ({ resumeId, jobDescription }) => {
       setTailoringError(null);
       setAcceptedIndices([]);
       const response = await api.post(`/resumes/${resumeId}/tailor`, { jobDescription });
-      return response.data.data; // { summary, suggestions: [{ original, suggested, reason }] }
+      const result = response.data?.data;
+
+      if (
+        !result ||
+        typeof result.summary !== 'string' ||
+        !Array.isArray(result.suggestions) ||
+        result.suggestions.some(
+          (suggestion: unknown) =>
+            !suggestion ||
+            typeof suggestion !== 'object' ||
+            typeof (suggestion as TailorSuggestion).original !== 'string' ||
+            typeof (suggestion as TailorSuggestion).suggested !== 'string' ||
+            typeof (suggestion as TailorSuggestion).reason !== 'string'
+        )
+      ) {
+        throw new Error('Malformed tailor response');
+      }
+
+      return result;
     },
-    onError: (err: any) => {
-      console.error(err);
+    onError: () => {
       setTailoringError("Couldn't generate suggestions, try again");
+      setAcceptedIndices([]);
     }
   });
 
@@ -96,7 +142,7 @@ export default function ApplicationsPage() {
   const companies = companiesData?.companies || [];
   const resumes = resumesData?.resumes || [];
 
-  const { register, handleSubmit, reset, watch, setValue } = useForm({
+  const { register, handleSubmit, reset, watch, setValue } = useForm<ApplicationFormValues>({
     defaultValues: {
       companyId: '',
       position: '',
@@ -121,6 +167,8 @@ export default function ApplicationsPage() {
   const watchedCompanyId = watch('companyId');
   const watchedResumeId = watch('resumeId');
   const watchedJobDescription = watch('jobDescription');
+  const tailorSuggestions = tailorMutation.data?.suggestions || [];
+  const canTailorResume = Boolean(watchedResumeId && watchedJobDescription.trim());
 
   useEffect(() => {
     if (editingApplication || !modalOpen) return;
@@ -210,7 +258,7 @@ export default function ApplicationsPage() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: ApplicationFormValues) => {
       const payload = {
         ...data,
         salaryMin: data.salaryMin ? parseFloat(data.salaryMin) : null,
@@ -249,12 +297,17 @@ export default function ApplicationsPage() {
   });
 
   const handleTailorResume = () => {
-    if (watchedResumeId && watchedJobDescription) {
-      tailorMutation.mutate({ resumeId: watchedResumeId, jobDescription: watchedJobDescription });
+    if (!watchedResumeId || !watchedJobDescription.trim()) {
+      return;
     }
+
+    tailorMutation.mutate({
+      resumeId: watchedResumeId,
+      jobDescription: watchedJobDescription.trim(),
+    });
   };
 
-  const handleAcceptSuggestion = (idx: number, suggestions: any[]) => {
+  const handleAcceptSuggestion = (idx: number, suggestions: TailorSuggestion[]) => {
     let nextIndices = [...acceptedIndices];
     if (nextIndices.includes(idx)) {
       nextIndices = nextIndices.filter(item => item !== idx);
@@ -265,13 +318,13 @@ export default function ApplicationsPage() {
     updateTailoringNotesField(nextIndices, suggestions);
   };
 
-  const handleAcceptAllSuggestions = (suggestions: any[]) => {
+  const handleAcceptAllSuggestions = (suggestions: TailorSuggestion[]) => {
     const nextIndices = suggestions.map((_, idx) => idx);
     setAcceptedIndices(nextIndices);
     updateTailoringNotesField(nextIndices, suggestions);
   };
 
-  const updateTailoringNotesField = (indices: number[], suggestions: any[]) => {
+  const updateTailoringNotesField = (indices: number[], suggestions: TailorSuggestion[]) => {
     if (indices.length === 0) {
       setValue('tailoringNotes', '');
       return;
@@ -718,6 +771,157 @@ export default function ApplicationsPage() {
                         )}
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                        Job Description
+                      </label>
+                      <textarea
+                        rows={5}
+                        className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none resize-none"
+                        placeholder="Paste the job description here so the linked resume can be tailored..."
+                        {...register('jobDescription')}
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Optional. Tailoring only runs when you click the button below.
+                      </p>
+                    </div>
+
+                    {canTailorResume && (
+                      <div className="flex justify-start">
+                        <button
+                          type="button"
+                          onClick={handleTailorResume}
+                          disabled={tailorMutation.isPending}
+                          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          {tailorMutation.isPending ? 'Tailoring...' : 'Tailor Resume'}
+                        </button>
+                      </div>
+                    )}
+
+                    {(tailoringError || tailorMutation.data) && (
+                      <div className="rounded-xl border border-[#24262f] bg-[#0d0e12] p-4">
+                        <details open className="group">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-white">
+                            <span className="inline-flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-blue-400" />
+                              Tailor Resume Results
+                            </span>
+                            <span className="text-xs font-medium text-slate-500 group-open:text-slate-400">
+                              Click to collapse
+                            </span>
+                          </summary>
+
+                          <div className="mt-4 space-y-4">
+                            {tailoringError && (
+                              <div className="flex items-start gap-3 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-sm text-rose-400">
+                                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                                <span>{tailoringError}</span>
+                              </div>
+                            )}
+
+                            {tailorMutation.data?.summary && (
+                              <div className="rounded-lg border border-[#24262f] bg-[#16181d] p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                  Summary
+                                </p>
+                                <p className="mt-1 text-sm text-slate-300 whitespace-pre-line">
+                                  {tailorMutation.data.summary}
+                                </p>
+                              </div>
+                            )}
+
+                            {tailorSuggestions.length > 0 ? (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                    Suggestions
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAcceptAllSuggestions(tailorSuggestions)}
+                                    className="rounded-md border border-[#24262f] px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-[#24262f] hover:text-white"
+                                  >
+                                    Accept All
+                                  </button>
+                                </div>
+
+                                {tailorSuggestions.map((suggestion, idx) => {
+                                  const isAccepted = acceptedIndices.includes(idx);
+
+                                  return (
+                                    <div key={`${suggestion.original}-${idx}`} className="rounded-lg border border-[#24262f] bg-[#16181d] p-4">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="space-y-3 flex-1">
+                                          <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                                              Original
+                                            </p>
+                                            <p className="rounded-md border border-[#24262f] bg-[#0d0e12] px-3 py-2 text-sm text-slate-300 whitespace-pre-line">
+                                              {suggestion.original}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                                              Suggested
+                                            </p>
+                                            <p className="rounded-md border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-sm text-white whitespace-pre-line">
+                                              {suggestion.suggested}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                                              Reason
+                                            </p>
+                                            <p className="text-sm text-slate-400">
+                                              {suggestion.reason}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAcceptSuggestion(idx, tailorSuggestions)}
+                                          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${
+                                            isAccepted
+                                              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                                              : 'border-[#24262f] text-slate-300 hover:bg-[#24262f] hover:text-white'
+                                          }`}
+                                        >
+                                          <Check className="h-3.5 w-3.5" />
+                                          {isAccepted ? 'Accepted' : 'Accept'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-400">
+                                No suggestions were returned.
+                              </p>
+                            )}
+
+                            <div>
+                              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                                Tailoring Notes
+                              </label>
+                              <textarea
+                                rows={4}
+                                className="w-full rounded-lg border border-[#24262f] bg-[#16181d] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none resize-none"
+                                placeholder="Accepted suggestions will be stored here as a note on the application..."
+                                {...register('tailoringNotes')}
+                              />
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                This note is saved with the application. Your resume file is not modified.
+                              </p>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">

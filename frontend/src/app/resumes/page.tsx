@@ -292,118 +292,122 @@ export default function ResumesPage() {
         {/* Modal Form */}
         {modalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-            <div className="w-full max-w-md rounded-xl border border-[#24262f] bg-[#16181d] p-6 shadow-2xl relative">
+            <div className="w-full max-w-md max-h-[90vh] flex flex-col rounded-xl border border-[#24262f] bg-[#16181d] shadow-2xl relative overflow-hidden">
               <button
                 onClick={() => setModalOpen(false)}
-                className="absolute top-4 right-4 rounded-md p-1.5 text-slate-400 hover:bg-[#24262f] hover:text-white transition-colors"
+                className="absolute top-4 right-4 rounded-md p-1.5 text-slate-400 hover:bg-[#24262f] hover:text-white transition-colors z-10"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <h2 className="text-xl font-bold text-white mb-4">
-                {editingResume ? 'Edit Resume Metadata' : 'Add New Resume'}
-              </h2>
+              <div className="p-6 pb-4 border-b border-[#24262f]">
+                <h2 className="text-xl font-bold text-white">
+                  {editingResume ? 'Edit Resume Metadata' : 'Add New Resume'}
+                </h2>
+              </div>
 
               {formError && (
-                <div className="mb-4 flex items-start gap-3 rounded-lg bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-500">
+                <div className="mx-6 mt-4 flex items-start gap-3 rounded-lg bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-500">
                   <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
                   <span>{formError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Resume Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. Software Engineer - General"
-                    {...register('name', { required: true })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Version Code *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. v1.2 or 2026-Q3"
-                    {...register('version', { required: true })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Tags (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. frontend, startup, remote"
-                    {...register('tags')}
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Used to auto-suggest this resume when the job title matches a tag.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Upload PDF Resume
-                  </label>
-                  <div className="border border-dashed border-[#24262f] rounded-lg p-4 bg-[#0d0e12] flex flex-col items-center justify-center cursor-pointer hover:border-slate-500 transition-colors relative">
+              <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      Resume Name *
+                    </label>
                     <input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setSelectedFile(file);
-                      }}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="e.g. Software Engineer - General"
+                      {...register('name', { required: true })}
                     />
-                    <Upload className="h-5 w-5 text-slate-400 mb-1.5" />
-                    <span className="text-xs text-slate-300 font-medium text-center truncate w-full px-2">
-                      {selectedFile ? selectedFile.name : 'Select PDF Resume'}
-                    </span>
-                    <span className="text-[10px] text-slate-500 mt-1">Max 5MB (PDF only)</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      Version Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="e.g. v1.2 or 2026-Q3"
+                      {...register('version', { required: true })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      Tags (comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="e.g. frontend, startup, remote"
+                      {...register('tags')}
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Used to auto-suggest this resume when the job title matches a tag.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Upload PDF Resume
+                    </label>
+                    <div className="border border-dashed border-[#24262f] rounded-lg p-4 bg-[#0d0e12] flex flex-col items-center justify-center cursor-pointer hover:border-slate-500 transition-colors relative">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setSelectedFile(file);
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <Upload className="h-5 w-5 text-slate-400 mb-1.5" />
+                      <span className="text-xs text-slate-300 font-medium text-center truncate w-full px-2">
+                        {selectedFile ? selectedFile.name : 'Select PDF Resume'}
+                      </span>
+                      <span className="text-[10px] text-slate-500 mt-1">Max 5MB (PDF only)</span>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-[10px] font-semibold text-slate-500 py-1">
+                    — OR —
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      File URL (Google Drive, Dropbox, Notion, etc.)
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      placeholder="e.g. https://drive.google.com/..."
+                      {...register('fileUrl')}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isDefault"
+                      className="h-4 w-4 rounded border-[#24262f] bg-[#0d0e12] accent-blue-600"
+                      {...register('isDefault')}
+                    />
+                    <label htmlFor="isDefault" className="text-sm text-slate-300">
+                      Use as default resume when no tags match
+                    </label>
                   </div>
                 </div>
 
-                <div className="text-center text-[10px] font-semibold text-slate-500 py-1">
-                  — OR —
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    File URL (Google Drive, Dropbox, Notion, etc.)
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full rounded-lg border border-[#24262f] bg-[#0d0e12] px-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. https://drive.google.com/..."
-                    {...register('fileUrl')}
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isDefault"
-                    className="h-4 w-4 rounded border-[#24262f] bg-[#0d0e12] accent-blue-600"
-                    {...register('isDefault')}
-                  />
-                  <label htmlFor="isDefault" className="text-sm text-slate-300">
-                    Use as default resume when no tags match
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-3 border-t border-[#24262f] pt-4">
+                <div className="flex justify-end gap-3 border-t border-[#24262f] p-6 bg-[#16181d]">
                   <button
                     type="button"
                     onClick={() => setModalOpen(false)}

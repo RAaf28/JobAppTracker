@@ -26,6 +26,8 @@ export const createApplicationSchema = z.object({
     resumeId: z.string().uuid('Invalid resume ID').optional().nullable(),
     coverLetter: z.string().optional().nullable(),
     notes: z.string().optional().nullable(),
+    jobDescription: z.string().optional().nullable(),
+    tailoringNotes: z.string().optional().nullable(),
   }),
 });
 
@@ -55,5 +57,7 @@ export const updateApplicationSchema = z.object({
     resumeId: z.string().uuid('Invalid resume ID').optional().nullable(),
     coverLetter: z.string().optional().nullable(),
     notes: z.string().optional().nullable(),
+    jobDescription: z.string().optional().nullable(),
+    tailoringNotes: z.string().optional().nullable(),
   }),
 });

@@ -62,6 +62,8 @@ model Application {
   deadline     DateTime?
   coverLetter  String?
   notes        String?
+  jobDescription String?
+  tailoringNotes  String?
   companyId    String
   company      Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   resumeId     String?

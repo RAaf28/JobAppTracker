@@ -113,6 +113,8 @@ export const createApplication = async (req: AuthRequest, res: Response, next: N
       resumeId,
       coverLetter,
       notes,
+      jobDescription,
+      tailoringNotes,
     } = req.body;
 
     // Verify company belongs to user
@@ -146,6 +148,8 @@ export const createApplication = async (req: AuthRequest, res: Response, next: N
         deadline: deadline ? new Date(deadline) : null,
         coverLetter,
         notes,
+        jobDescription,
+        tailoringNotes,
         userId,
         companyId,
         resumeId: resumeId || null,
@@ -179,6 +183,8 @@ export const updateApplication = async (req: AuthRequest, res: Response, next: N
       resumeId,
       coverLetter,
       notes,
+      jobDescription,
+      tailoringNotes,
     } = req.body;
 
     const existingApplication = await prisma.application.findFirst({
@@ -223,6 +229,8 @@ export const updateApplication = async (req: AuthRequest, res: Response, next: N
         deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : undefined,
         coverLetter,
         notes,
+        jobDescription,
+        tailoringNotes,
         companyId,
         resumeId: resumeId !== undefined ? (resumeId || null) : undefined,
       },

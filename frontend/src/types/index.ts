@@ -66,6 +66,8 @@ export interface Application {
   deadline?: string | null;
   coverLetter?: string | null;
   notes?: string | null;
+  jobDescription?: string | null;
+  tailoringNotes?: string | null;
   companyId: string;
   company: Company;
   resumeId?: string | null;
